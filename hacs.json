@@ -1,4 +1,5 @@
 {
   "name": "Fan Speed Control",
+  "filename": "fan_speed_control.py",
   "render_readme": "true"
 }
