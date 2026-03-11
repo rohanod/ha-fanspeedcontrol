@@ -7,8 +7,7 @@ A python script for Home Assistant that control fan speed with [Fan Template](ht
 
 # Document
 
-- [Chinese Document](https://github.com/iml885203/HA-FanSpeedControl/blob/master/README_TW.md)
-- [English Document](https://github.com/iml885203/HA-FanSpeedControl/blob/master/README.md)
+- [Documentation](https://github.com/rohanod/ha-fanspeedcontrol/blob/main/README.md)
 
 # How it work
 
@@ -166,11 +165,11 @@ logger:
 
 # Screenshot
 
-![image](https://github.com/iml885203/HA-FanSpeedControl/blob/master/Screenshot/fan.png?raw=true)
+![image](https://github.com/rohanod/ha-fanspeedcontrol/blob/main/Screenshot/fan.png?raw=true)
 
 ## Custom ui
 
-![image](https://github.com/iml885203/HA-FanSpeedControl/blob/master/Screenshot/fanui.png?raw=true)
+![image](https://github.com/rohanod/ha-fanspeedcontrol/blob/main/Screenshot/fanui.png?raw=true)
 
 # Todos
 
