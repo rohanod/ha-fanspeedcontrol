@@ -15,13 +15,14 @@ The script automatically call broadlink service when you set fan speed.
 
 ## Example
 
-if your fan speed range is 1~12.
+If your fan exposes 10 discrete speed steps, store the requested speed as a
+percentage helper with values `0, 10, 20 ... 100`.
 
-example1: call `increase` fan 4 times when you set fan speed from 1 to 5.
+example1: call `increase` 4 times when you set fan speed from `10` to `50`.
 
-example2: call `decrease` fan 3 times when you set fan speed from 5 to 2.
+example2: call `decrease` 3 times when you set fan speed from `50` to `20`.
 
-example3: call `decrease` fan 2 times when you set fan speed from 2 to 12.
+example3: call `decrease` 2 times when you set fan speed from `20` to `100`.
 
 # Installation
 
@@ -59,7 +60,7 @@ set_percentage:
       fan_speed: "{{ percentage }}"
       fan_speed_entity_id: 'input_number.status_fan_speed'
       fan_entity_id: 'fan.bedroom_fan'
-      fan_speed_count: 12
+      fan_speed_count: 10
       service_domain: 'remote'
       service: 'send_command'
       service_data_increase:
@@ -84,6 +85,7 @@ input_number:
     name: 'Fan Speed'
     min: 0
     max: 100
+    step: 10
 
 input_select:
   fan_osc:
@@ -96,7 +98,7 @@ fan:
     fans:
       bedroom_fan:
         friendly_name: "myFan"
-        speed_count: 12
+        speed_count: 10
         value_template: "{{ states('input_boolean.status_fan_power') }}"
         percentage_template: "{{ states('input_number.status_fan_speed') | int }}"
         oscillating_template: "{{ states('input_select.fan_osc') }}"
@@ -128,7 +130,7 @@ fan:
               fan_speed: "{{ percentage }}"
               fan_speed_entity_id: 'input_number.status_fan_speed'
               fan_entity_id: 'fan.bedroom_fan'
-              fan_speed_count: 12
+              fan_speed_count: 10
               service_domain: 'remote'
               service: 'send_command'
               service_data_increase:
@@ -162,6 +164,14 @@ logger:
   logs:
     homeassistant.components.python_script.fan_speed_control.py: debug
 ```
+
+## Sample configuration
+
+See [examples/configuration.yaml](/Users/rohan/HA-FanSpeedControl/examples/configuration.yaml) for a complete modern template fan example using:
+
+- `input_number.status_fan_speed` with `0..100` and `step: 10`
+- `speed_count: 10`
+- Broadlink `b64:` commands
 
 # Screenshot
 

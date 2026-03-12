@@ -1,0 +1,90 @@
+python_script:
+
+input_boolean:
+  status_fan_power:
+    name: Fan Power
+
+input_number:
+  status_fan_speed:
+    name: Fan Speed
+    min: 0
+    max: 100
+    step: 10
+
+input_select:
+  fan_osc:
+    name: Fan osc
+    options:
+      - "True"
+      - "False"
+
+template:
+  - fan:
+      - name: Bedroom Fan
+        unique_id: bedroom_fan
+        default_entity_id: fan.bedroom_fan
+        speed_count: 10
+        state: "{{ is_state('input_boolean.status_fan_power', 'on') }}"
+        percentage: "{{ states('input_number.status_fan_speed') | int(0) }}"
+        oscillating: "{{ is_state('input_select.fan_osc', 'True') }}"
+
+        turn_on:
+          - condition: state
+            entity_id:
+              - input_boolean.status_fan_power
+            state: "off"
+            match: all
+          - action: remote.send_command
+            target:
+              entity_id: remote.bedroom
+            data:
+              command: "b64:JgBIAEkbGTUYGxkbGTQZGxgbGBoZHRgcGBwYGxkbGRoZMxkbGAANDUkbGTUYGxkcGDQZGxgaGRoZHRgcGBsZGxgcGBoZNBgaGQANBQ=="
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.status_fan_power
+
+        turn_off:
+          - condition: state
+            entity_id:
+              - input_boolean.status_fan_power
+            state: "on"
+            match: all
+          - action: remote.send_command
+            target:
+              entity_id: remote.bedroom
+            data:
+              command: "b64:JgBIAEkbGTUYGxkbGTQZGxgbGBoZHRgcGBwYGxkbGRoZMxkbGAANDUkbGTUYGxkcGDQZGxgaGRoZHRgcGBsZGxgcGBoZNBgaGQANBQ=="
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.status_fan_power
+
+        set_percentage:
+          - action: python_script.fan_speed_control
+            data:
+              fan_speed: "{{ percentage }}"
+              fan_speed_entity_id: input_number.status_fan_speed
+              fan_entity_id: fan.bedroom_fan
+              fan_speed_count: 10
+              service_domain: remote
+              service: send_command
+              service_data_increase:
+                entity_id: remote.bedroom
+                command: "b64:JgBIAEkcGDQZHBgcGDQZGxgbGBsYHRg0GRwYNBkcGDQZGxgzGQAMu0kcGDQYHBgcGDQZGxgbGBsYHRg0GRwYNBkcGDQZGxgzGQANBQ=="
+              service_data_decrease:
+                entity_id: remote.bedroom
+                command: "b64:JgBIAEkbGTQZGxkbGTQZGxoZGhkZNRk0GTQZNBk0GTQZMxkaGQAM+kkbGTQZGxkbGTQZGxkaGRoZNRk0GTQZNBk0GTQZMxkaGgANBQ=="
+
+        set_oscillating:
+          - condition: state
+            entity_id:
+              - input_boolean.status_fan_power
+            state: "on"
+            match: all
+          - action: remote.send_command
+            target:
+              entity_id: remote.bedroom
+            data:
+              command: "b64:JgBIAEkcGDQZGxkbGTQZGxkaGBoZNRkbGTQZGxk0GRoZGhkaGQAM2kkcGDQZGxkbGTQZGhgbGRoZNRkbGTQZGxk0GRsZGxgbGAANBQ=="
+          - action: input_select.select_next
+            target:
+              entity_id: input_select.fan_osc
