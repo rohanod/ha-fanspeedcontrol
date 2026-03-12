@@ -65,6 +65,7 @@ template:
               fan_speed_entity_id: input_number.status_fan_speed
               fan_entity_id: fan.bedroom_fan
               fan_speed_count: 10
+              command_delay: 1.0
               service_domain: remote
               service: send_command
               service_data_increase:
