@@ -44,6 +44,7 @@ Or you can copy the Python script in to your `<config>/python_scripts` directory
 |fan_speed_entity_id|true|string||
 |fan_entity_id|true|string||
 |fan_speed_count|true|integer||
+|command_delay|false|float|seconds to wait between repeated commands, default `1.0`|
 |service_domain|true|string||
 |service|true|string||
 |service_data_increase|true|object||
@@ -61,6 +62,7 @@ set_percentage:
       fan_speed_entity_id: 'input_number.status_fan_speed'
       fan_entity_id: 'fan.bedroom_fan'
       fan_speed_count: 10
+      command_delay: 1.0
       service_domain: 'remote'
       service: 'send_command'
       service_data_increase:
@@ -131,6 +133,7 @@ fan:
               fan_speed_entity_id: 'input_number.status_fan_speed'
               fan_entity_id: 'fan.bedroom_fan'
               fan_speed_count: 10
+              command_delay: 1.0
               service_domain: 'remote'
               service: 'send_command'
               service_data_increase:
@@ -171,6 +174,7 @@ See [examples/configuration.yaml](/Users/rohan/HA-FanSpeedControl/examples/confi
 
 - `input_number.status_fan_speed` with `0..100` and `step: 10`
 - `speed_count: 10`
+- `command_delay: 1.0` for slower repeated presses
 - Broadlink `b64:` commands
 
 # Screenshot

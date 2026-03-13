@@ -3,6 +3,7 @@ service_domain = data.get('service_domain')
 service = data.get('service')
 service_data_increase = data.get('service_data_increase')
 service_data_decrease = data.get('service_data_decrease')
+command_delay = data.get('command_delay', 1.0)
 # fan speed data
 speed = data.get('fan_speed')
 speed_count = data.get('fan_speed_count')
@@ -25,8 +26,23 @@ def check_speed(logger, speed):
   return True
 
 
+def get_command_delay(logger, command_delay):
+  try:
+    parsed_delay = float(command_delay)
+  except (TypeError, ValueError):
+    logger.warning('<fan_speed_control> command_delay ({}) is invalid, fallback to 1.0 second'.format(command_delay))
+    return 1.0
+
+  if parsed_delay < 0:
+    logger.warning('<fan_speed_control> command_delay ({}) must be >= 0, fallback to 1.0 second'.format(command_delay))
+    return 1.0
+
+  return parsed_delay
+
+
 ### Run
 if check_speed(logger, speed):
+  command_delay = get_command_delay(logger, command_delay)
   speed_step = 100 // speed_count
   target_speed = int(speed) // speed_step
   last_speed = int(float(fan_speed_entity.state)) // speed_step if fan_speed_entity.state else 1
@@ -62,7 +78,7 @@ if check_speed(logger, speed):
     for i in range(loop):
       logger.debug('<fan_speed_control> call service ({}.{}) {}'.format(service_domain, service, service_data))
       result = hass.services.call(service_domain, service, service_data)
-      time.sleep(0.75)
+      time.sleep(command_delay)
 
 
 elif fan_entity.state is not 'off' and speed == 'off':
