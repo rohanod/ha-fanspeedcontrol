@@ -7,7 +7,7 @@ input_boolean:
 input_number:
   status_fan_speed:
     name: Fan Speed
-    min: 0
+    min: 10
     max: 100
     step: 10
 
@@ -25,7 +25,10 @@ template:
         default_entity_id: fan.bedroom_fan
         speed_count: 10
         state: "{{ is_state('input_boolean.status_fan_power', 'on') }}"
-        percentage: "{{ states('input_number.status_fan_speed') | int(0) }}"
+        percentage: >
+          {{ states('input_number.status_fan_speed') | int(10)
+             if is_state('input_boolean.status_fan_power', 'on')
+             else 0 }}
         oscillating: "{{ is_state('input_select.fan_osc', 'True') }}"
 
         turn_on:
@@ -34,6 +37,11 @@ template:
               - input_boolean.status_fan_power
             state: "off"
             match: all
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.status_fan_speed
+            data:
+              value: 10
           - action: remote.send_command
             target:
               entity_id: remote.bedroom
@@ -66,6 +74,8 @@ template:
               fan_entity_id: fan.bedroom_fan
               fan_speed_count: 10
               command_delay: 1.0
+              startup_delay: 1.0
+              power_on_percentage: 10
               service_domain: remote
               service: send_command
               service_data_increase:
