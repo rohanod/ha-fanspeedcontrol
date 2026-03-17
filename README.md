@@ -40,10 +40,15 @@ Or you can copy the Python script in to your `<config>/python_scripts` directory
 
 |key|required|type|description|
 |-|-|-|-|
-|fan_speed|true|string|speed from fan template|
+|fan_speed|true|string|target percentage from the fan entity (`0` turns off)|
 |fan_speed_entity_id|true|string||
 |fan_entity_id|true|string||
 |fan_speed_count|true|integer||
+|command_delay|false|float|seconds to wait between repeated commands, default `1.0`|
+|startup_delay|false|float|seconds to wait after turning the fan on before adjusting speed, default `1.0`|
+|power_on_percentage|false|integer|assumed startup speed after power on, default is the minimum speed step|
+|wrap_increase|false|boolean|allow wraparound when increasing past the maximum speed, default `false`|
+|wrap_decrease|false|boolean|allow wraparound when decreasing past the minimum speed, default `false`|
 |service_domain|true|string||
 |service|true|string||
 |service_data_increase|true|object||
@@ -56,11 +61,14 @@ Or you can copy the Python script in to your `<config>/python_scripts` directory
 ```yaml
 set_percentage:
   - service: python_script.fan_speed_control
-    data_template:
+    data:
       fan_speed: "{{ percentage }}"
       fan_speed_entity_id: 'input_number.status_fan_speed'
       fan_entity_id: 'fan.bedroom_fan'
       fan_speed_count: 10
+      command_delay: 1.0
+      startup_delay: 1.0
+      power_on_percentage: 10
       service_domain: 'remote'
       service: 'send_command'
       service_data_increase:
@@ -75,84 +83,7 @@ set_percentage:
 
 ## Template Fan config
 
-```yaml
-input_boolean:
-  status_fan_power:
-    name: 'Fan Power'
-
-input_number:
-  status_fan_speed:
-    name: 'Fan Speed'
-    min: 0
-    max: 100
-    step: 10
-
-input_select:
-  fan_osc:
-    name: 'Fan osc'
-    options:
-      - 'True'
-      - 'False'
-fan:
-  - platform: template
-    fans:
-      bedroom_fan:
-        friendly_name: "myFan"
-        speed_count: 10
-        value_template: "{{ states('input_boolean.status_fan_power') }}"
-        percentage_template: "{{ states('input_number.status_fan_speed') | int }}"
-        oscillating_template: "{{ states('input_select.fan_osc') }}"
-        turn_on:
-          - condition: state
-            entity_id: input_boolean.status_fan_power
-            state: 'off'
-          - service: remote.send_command
-            data:
-              entity_id: remote.broadlink
-              device: fan
-              command: toggle
-          - service: input_boolean.turn_on
-            entity_id: input_boolean.status_fan_power
-        turn_off:
-          - condition: state
-            entity_id: input_boolean.status_fan_power
-            state: 'on'
-          - service: remote.send_command
-            data:
-              entity_id: remote.broadlink
-              device: fan
-              command: toggle
-          - service: input_boolean.turn_off
-            entity_id: input_boolean.status_fan_power
-        set_percentage:
-          - service: python_script.fan_speed_control
-            data_template:
-              fan_speed: "{{ percentage }}"
-              fan_speed_entity_id: 'input_number.status_fan_speed'
-              fan_entity_id: 'fan.bedroom_fan'
-              fan_speed_count: 10
-              service_domain: 'remote'
-              service: 'send_command'
-              service_data_increase:
-                entity_id: remote.broadlink
-                device: fan
-                command: increase
-              service_data_decrease:
-                entity_id: remote.broadlink
-                device: fan
-                command: decrease
-        set_oscillating:
-          - condition: state
-            entity_id: input_boolean.status_fan_power
-            state: 'on'
-          - service: remote.send_command
-            data:
-              entity_id: remote.broadlink
-              device: fan
-              command: oscillate
-          - service: input_select.select_next
-            entity_id: input_select.fan_osc
-```
+Use the complete modern template fan example in [examples/configuration.yaml](/Users/rohan/HA-FanSpeedControl/examples/configuration.yaml).
 
 # Debug
 
@@ -169,8 +100,12 @@ logger:
 
 See [examples/configuration.yaml](/Users/rohan/HA-FanSpeedControl/examples/configuration.yaml) for a complete modern template fan example using:
 
-- `input_number.status_fan_speed` with `0..100` and `step: 10`
+- `input_number.status_fan_speed` with `10..100` and `step: 10`
+- `percentage: 0` only when the fan is actually off
 - `speed_count: 10`
+- `command_delay: 1.0` for slower repeated presses
+- `startup_delay: 1.0` and `power_on_percentage: 10` for scene-safe power-on-to-target changes
+- no wraparound by default, so `30 -> 100` increases seven steps instead of incorrectly decreasing to `10`
 - Broadlink `b64:` commands
 
 # Screenshot
