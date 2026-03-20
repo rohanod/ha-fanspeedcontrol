@@ -1,8 +1,8 @@
 #### Init
 service_domain = data.get('service_domain')
 service = data.get('service')
-service_data_increase = dict(data.get('service_data_increase') or {})
-service_data_decrease = dict(data.get('service_data_decrease') or {})
+service_data_increase = data.get('service_data_increase') or {}
+service_data_decrease = data.get('service_data_decrease') or {}
 
 target_percentage = data.get('fan_speed')
 speed_count = data.get('fan_speed_count')
@@ -72,7 +72,7 @@ def percentage_to_step(percentage, speed_max):
   if percentage <= 0:
     return 0
 
-  step = int(round((float(percentage) * speed_max) / 100.0))
+  step = ((percentage * speed_max) + 50) // 100
   return clamp(step, 1, speed_max)
 
 
@@ -80,7 +80,7 @@ def step_to_percentage(step, speed_max):
   if step <= 0:
     return 0
 
-  percentage = int(round((float(step) * 100.0) / speed_max))
+  percentage = ((step * 100) + (speed_max // 2)) // speed_max
   return clamp(percentage, 1, 100)
 
 
@@ -89,6 +89,13 @@ def sync_speed_helper(percentage):
     'entity_id': fan_speed_entity_id,
     'value': percentage
   })
+
+
+def clone_payload(payload):
+  cloned = {}
+  for key in payload:
+    cloned[key] = payload[key]
+  return cloned
 
 
 def send_control(payload):
@@ -101,14 +108,14 @@ def send_repeated(payload, count, delay_seconds):
     return
 
   if support_num_repeats:
-    repeated_payload = dict(payload)
+    repeated_payload = clone_payload(payload)
     repeated_payload['num_repeats'] = count
     repeated_payload['delay_secs'] = delay_seconds
     send_control(repeated_payload)
     return
 
   for index in range(count):
-    send_control(dict(payload))
+    send_control(clone_payload(payload))
     if index + 1 < count and delay_seconds > 0:
       time.sleep(delay_seconds)
 
