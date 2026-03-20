@@ -3,7 +3,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 [![Donate](https://img.shields.io/badge/donate-Coffee-yellow.svg)](https://www.buymeacoffee.com/dodoro)
 
-A python script for Home Assistant that control fan speed with [Fan Template](https://www.home-assistant.io/integrations/fan.template/) and [Broadlink](https://www.home-assistant.io/integrations/broadlink/).
+A python script for Home Assistant that controls fan speed with [Template Fan](https://www.home-assistant.io/integrations/template/#fan) and [Broadlink](https://www.home-assistant.io/integrations/broadlink/).
 
 # Document
 
@@ -11,36 +11,36 @@ A python script for Home Assistant that control fan speed with [Fan Template](ht
 
 # How it work
 
-The script automatically call broadlink service when you set fan speed.
+The script automatically calls the configured Broadlink action when you set fan speed.
 
 ## Example
 
-If your fan exposes 10 discrete speed steps, store the requested speed as a
-percentage helper with values `0, 10, 20 ... 100`.
+If your fan exposes 10 discrete speed steps, store the requested helper speed as
+`10, 20, 30 ... 100`. The fan entity itself still uses `0` for the off state.
 
 example1: call `increase` 4 times when you set fan speed from `10` to `50`.
 
 example2: call `decrease` 3 times when you set fan speed from `50` to `20`.
 
-example3: call `decrease` 2 times when you set fan speed from `20` to `100`.
+example3: call `increase` 8 times when you set fan speed from `20` to `100`.
 
 # Installation
 
-enable [python_script](https://www.home-assistant.io/integrations/python_script/) for your HomeAssistant.
+Enable [python_script](https://www.home-assistant.io/integrations/python_script/) for Home Assistant.
 
 - Add to `configuration.yaml`: `python_script:`
 - Create folder `<config>/python_scripts`
-- restart HomeAssistant
+- restart Home Assistant
 
-Find `Fan Speed Control` on HACS automation category.
+If you use HACS, add this repository as a custom repository with type `Python Script`.
 
-Or you can copy the Python script in to your `<config>/python_scripts` directory.
+Or copy the Python script into your `<config>/python_scripts` directory and call `python_script.reload`.
 
 # Script arguments
 
 |key|required|type|description|
 |-|-|-|-|
-|fan_speed|true|string|target percentage from the fan entity (`0` turns off)|
+|fan_speed|true|string|target percentage from the fan entity (`0` turns off, non-zero values are mapped to steps)|
 |fan_speed_entity_id|true|string||
 |fan_entity_id|true|string||
 |fan_speed_count|true|integer||
@@ -56,11 +56,11 @@ Or you can copy the Python script in to your `<config>/python_scripts` directory
 
 # Config Example
 
-`set_percentage` on template fan
+`set_percentage` on a modern template fan
 
 ```yaml
 set_percentage:
-  - service: python_script.fan_speed_control
+  - action: python_script.fan_speed_control
     data:
       fan_speed: "{{ percentage }}"
       fan_speed_entity_id: 'input_number.status_fan_speed'
@@ -73,12 +73,10 @@ set_percentage:
       service: 'send_command'
       service_data_increase:
         entity_id: remote.broadlink
-        device: fan
-        command: increase
+        command: "b64:..."
       service_data_decrease:
         entity_id: remote.broadlink
-        device: fan
-        command: decrease
+        command: "b64:..."
 ```
 
 ## Template Fan config
