@@ -7,10 +7,11 @@ from contextlib import asynccontextmanager
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.script import Script
 
-from .config_flow import config_schema
+from .config import config_schema
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ def choose_direction(current, target, count, wrap_increase, wrap_decrease):
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Validate and add a fan without transmitting at startup."""
-    config = config_schema()(dict(entry.data))
+    config = config_schema()(dict(entry.options or entry.data))
     async_add_entities([ActionFan(hass, entry.entry_id, config)])
 
 
@@ -63,6 +64,11 @@ class ActionFan(FanEntity, RestoreEntity):
     def __init__(self, hass, unique_id, config):
         self._attr_name = config["name"]
         self._attr_unique_id = unique_id
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, unique_id)},
+            name=config["name"],
+            model="Remote-controlled fan",
+        )
         self._config = config
         self._attr_speed_count = config["speed_count"]
         self._lock = asyncio.Lock()

@@ -3,10 +3,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Fan Speed Control",
-        "description": "Configure actions for one fan. Each speed action must move exactly one step. Do not call this fan from its own actions. For toggle-only power, first verify the fan is off. Oscillation actions receive the boolean variable oscillating.",
+        "title": "Fan remote and codes",
+        "description": "Pick your remote and paste its command codes. The Bedroom Fan settings are filled in for new setups; existing fans show their saved settings. Saving does not send commands.",
         "data": {
-          "name": "Name",
+          "name": "Fan name",
           "speed_count": "Number of speeds",
           "power_on_percentage": "Speed after power on (%)",
           "command_delay": "Delay between speed commands (seconds)",
@@ -17,14 +17,46 @@
           "turn_off": "Power off actions",
           "increase": "Increase one speed step",
           "decrease": "Decrease one speed step",
-          "oscillate": "Oscillation actions (optional)"
+          "oscillate": "Oscillation actions (optional)",
+          "remote_entity_id": "IR remote",
+          "power_on_command": "Power on code",
+          "power_off_command": "Power off code",
+          "increase_command": "Speed up code",
+          "decrease_command": "Speed down code",
+          "oscillate_command": "Oscillation code (optional)"
+        },
+        "data_description": {
+          "remote_entity_id": "The Broadlink or other remote that sends the commands.",
+          "power_on_command": "Paste the full b64: code or a learned command name.",
+          "power_off_command": "For a power toggle, use the same code as Power on.",
+          "increase_command": "One press must increase the fan by one speed step.",
+          "decrease_command": "One press must decrease the fan by one speed step.",
+          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan."
+        },
+        "sections": {
+          "timing": {
+            "name": "Timing and speed behavior",
+            "description": "Keep the defaults unless your fan needs different timing or wraps around at the end of its speed range.",
+            "data": {
+              "power_on_percentage": "Speed after power on (%)",
+              "command_delay": "Delay between speed commands (seconds)",
+              "startup_delay": "Delay after power on (seconds)",
+              "wrap_increase": "Increasing wraps from maximum to minimum",
+              "wrap_decrease": "Decreasing wraps from minimum to maximum"
+            },
+            "data_description": {
+              "power_on_percentage": "The physical speed immediately after switching on. IR cannot detect it.",
+              "command_delay": "Seconds between repeated speed presses.",
+              "startup_delay": "Seconds to wait after switching on before changing speed."
+            }
+          }
         }
       },
       "reconfigure": {
-        "title": "Fan Speed Control",
-        "description": "Configure actions for one fan. Each speed action must move exactly one step. Do not call this fan from its own actions. For toggle-only power, first verify the fan is off. Oscillation actions receive the boolean variable oscillating.",
+        "title": "Fan remote and codes",
+        "description": "Pick your remote and paste its command codes. The Bedroom Fan settings are filled in for new setups; existing fans show their saved settings. Saving does not send commands.",
         "data": {
-          "name": "Name",
+          "name": "Fan name",
           "speed_count": "Number of speeds",
           "power_on_percentage": "Speed after power on (%)",
           "command_delay": "Delay between speed commands (seconds)",
@@ -35,15 +67,104 @@
           "turn_off": "Power off actions",
           "increase": "Increase one speed step",
           "decrease": "Decrease one speed step",
-          "oscillate": "Oscillation actions (optional)"
+          "oscillate": "Oscillation actions (optional)",
+          "remote_entity_id": "IR remote",
+          "power_on_command": "Power on code",
+          "power_off_command": "Power off code",
+          "increase_command": "Speed up code",
+          "decrease_command": "Speed down code",
+          "oscillate_command": "Oscillation code (optional)"
+        },
+        "data_description": {
+          "remote_entity_id": "The Broadlink or other remote that sends the commands.",
+          "power_on_command": "Paste the full b64: code or a learned command name.",
+          "power_off_command": "For a power toggle, use the same code as Power on.",
+          "increase_command": "One press must increase the fan by one speed step.",
+          "decrease_command": "One press must decrease the fan by one speed step.",
+          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan."
+        },
+        "sections": {
+          "timing": {
+            "name": "Timing and speed behavior",
+            "description": "Keep the defaults unless your fan needs different timing or wraps around at the end of its speed range.",
+            "data": {
+              "power_on_percentage": "Speed after power on (%)",
+              "command_delay": "Delay between speed commands (seconds)",
+              "startup_delay": "Delay after power on (seconds)",
+              "wrap_increase": "Increasing wraps from maximum to minimum",
+              "wrap_decrease": "Decreasing wraps from minimum to maximum"
+            },
+            "data_description": {
+              "power_on_percentage": "The physical speed immediately after switching on. IR cannot detect it.",
+              "command_delay": "Seconds between repeated speed presses.",
+              "startup_delay": "Seconds to wait after switching on before changing speed."
+            }
+          }
         }
       }
     },
     "error": {
-      "invalid_config": "Check speed count, percentages, finite delays (0\u201360 seconds), and nonempty valid action sequences."
+      "invalid_config": "Enter a name, select a remote, fill the four required command codes, and check the speed and timing values."
     },
     "abort": {
       "reconfigure_successful": "Fan configuration updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fan remote and codes",
+        "description": "Pick your remote and paste its command codes. The Bedroom Fan settings are filled in for new setups; existing fans show their saved settings. Saving does not send commands.",
+        "data": {
+          "name": "Fan name",
+          "speed_count": "Number of speeds",
+          "power_on_percentage": "Speed after power on (%)",
+          "command_delay": "Delay between speed commands (seconds)",
+          "startup_delay": "Delay after power on (seconds)",
+          "wrap_increase": "Increasing wraps from maximum to minimum",
+          "wrap_decrease": "Decreasing wraps from minimum to maximum",
+          "turn_on": "Power on actions",
+          "turn_off": "Power off actions",
+          "increase": "Increase one speed step",
+          "decrease": "Decrease one speed step",
+          "oscillate": "Oscillation actions (optional)",
+          "remote_entity_id": "IR remote",
+          "power_on_command": "Power on code",
+          "power_off_command": "Power off code",
+          "increase_command": "Speed up code",
+          "decrease_command": "Speed down code",
+          "oscillate_command": "Oscillation code (optional)"
+        },
+        "data_description": {
+          "remote_entity_id": "The Broadlink or other remote that sends the commands.",
+          "power_on_command": "Paste the full b64: code or a learned command name.",
+          "power_off_command": "For a power toggle, use the same code as Power on.",
+          "increase_command": "One press must increase the fan by one speed step.",
+          "decrease_command": "One press must decrease the fan by one speed step.",
+          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan."
+        },
+        "sections": {
+          "timing": {
+            "name": "Timing and speed behavior",
+            "description": "Keep the defaults unless your fan needs different timing or wraps around at the end of its speed range.",
+            "data": {
+              "power_on_percentage": "Speed after power on (%)",
+              "command_delay": "Delay between speed commands (seconds)",
+              "startup_delay": "Delay after power on (seconds)",
+              "wrap_increase": "Increasing wraps from maximum to minimum",
+              "wrap_decrease": "Decreasing wraps from minimum to maximum"
+            },
+            "data_description": {
+              "power_on_percentage": "The physical speed immediately after switching on. IR cannot detect it.",
+              "command_delay": "Seconds between repeated speed presses.",
+              "startup_delay": "Seconds to wait after switching on before changing speed."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Enter a name, select a remote, fill the four required command codes, and check the speed and timing values."
     }
   }
 }

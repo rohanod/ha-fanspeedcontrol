@@ -36,3 +36,8 @@ Local, ignored `.migration/` contains the original fan package, proposed replace
 The warning was subsequently accepted, source published to `master`, and the integration installed through Marketplace (repository ID `1178998417`). Native entry `01M6TXV721VTV7NSWK8S329FRF` now owns `fan.bedroom_fan`; the original template entity is disabled as `fan.bedroom_fan_legacy`. Its YAML and helpers remain intact. Migration copied the previous estimate (on, 50%, oscillation off) without transmitting IR; this is not independent physical verification.
 
 Version 1.0.1 fixes a lifecycle issue found during the registry rename. Tests cover the actual registry rename, config-entry reload, and restoration using the official Home Assistant 2026.11.0 harness. Live fan service requests succeeded at 50% → 60% → 50%; later, HomeKit issued a turn-off command. The subsequent Home Assistant restart restored that off state, with the native entry loaded and the legacy entity still disabled. No integration errors were present in the post-restart system log. Physical IR reception remains unverified.
+
+
+## Paste-code configuration — version 1.1.0
+
+The integration is classified as a **device** integration, with a device registry entry for each fan. The **Configure** button shows a remote picker and plain code fields. New setups start with the supplied Bedroom Fan codes; existing entries are read back into the same form. Timing and wrapping are in a collapsed section. Saving settings reloads this entry and preserves its fan identity and state; it sends no commands. Existing action configurations need no manual migration. Complex custom sequences remain editable without conversion or data loss.

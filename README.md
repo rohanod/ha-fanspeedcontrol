@@ -1,6 +1,6 @@
 # Fan Speed Control
 
-A native Home Assistant custom integration for fans controlled by incremental remote commands. Configure one fan per entry using the UI action editor; Broadlink `remote.send_command`, scripts, and other Home Assistant actions work without extra runtime dependencies.
+A native Home Assistant custom integration for fans controlled by incremental remote commands. Set up each fan as a device integration with a native remote picker and plain code fields. No YAML or action sequences are needed for setup.
 
 Requires **Home Assistant 2026.11.0+**. Install as an **Integration** in the built-in Marketplace or HACS, not as a Python Script. This repository is a custom repository, not an official Core integration or a default Marketplace listing.
 
@@ -9,13 +9,16 @@ Requires **Home Assistant 2026.11.0+**. Install as an **Integration** in the bui
 1. In Marketplace, accept its first-run warning and connect GitHub if prompted.
 2. Add `rohanod/ha-fanspeedcontrol` as a custom repository, category **Integration**. Install the integration release containing `custom_components/fan_speed_control/`.
 3. Restart Home Assistant, then **Settings → Devices & services → Add integration → Fan Speed Control**.
-4. Enter the fan's name, speed count, startup speed, delays, and four action sequences: power on, power off, increase one step, decrease one step. Optional oscillation actions receive the boolean template variable `oscillating`.
+4. Choose the remote and paste the power-on, power-off, speed-up, speed-down, and optional oscillation codes. Save. The fan appears as its own device with a native fan entity.
+5. Later, open **Fan Speed Control → Configure** to edit the saved codes. **Timing and speed behavior** is collapsed by default.
+
+New setup defaults match the existing Bedroom Fan: `remote.bedroom`, ten speeds, the current five Broadlink `b64:` codes, 10% startup speed, one-second command/startup delays, and wrapping disabled. Existing entries show their saved values, including any custom codes; opening or saving the form sends no IR. Clear the optional oscillation field to remove oscillation control.
+
+For a toggle-only power command, paste the same code in both power fields. Paste the full `b64:...` string or a learned command name. Each speed code must move the fan exactly one speed step.
 
 Manual installation: copy `custom_components/fan_speed_control` into your HA configuration's `custom_components` folder, restart, and add it through the UI.
 
-Each speed action must send exactly **one** press. Use unconditional transmitter actions, with errors propagated. Do not call this fan entity from its own actions; that would recurse. If using an existing script, call `script.<script_name>` directly so HA waits for completion; `script.turn_on` is fire-and-forget and cannot confirm completion.
-
-For Broadlink, choose `remote.send_command`, target your remote, and enter the learned command (or `b64:...`). The power-on and power-off sequences may use the same IR toggle command: this integration sends it only on a tracked power transition.
+Existing entries created with custom action sequences continue to work. If a sequence cannot be represented by one remote and one command per action, Configure retains its native action editor instead of discarding it. These advanced entries may call scripts or other HA actions; use direct script calls so completion can be awaited, and never call the fan recursively from its own actions.
 
 ## Behavior
 
@@ -25,7 +28,7 @@ For Broadlink, choose `remote.send_command`, target your remote, and enter the l
 - Startup uses the configured power-on speed and waits before adjusting. Set this to the fan's actual startup behavior; IR cannot detect a remembered physical speed.
 - Repeated presses wait `command_delay` seconds between them. Wrapping is disabled by default; enable each direction only if your fan supports it.
 - State restores on restart without sending commands. No polling or external speed/power helpers required.
-- Reconfigure commands through the entry's **Reconfigure** menu without replacing its entity identity.
+- Edit codes through the entry's **Configure** button without replacing its entity identity.
 
 IR is one-way: state is an estimate. Missed commands, the physical remote, and power loss can cause drift. An action error invalidates the affected estimate instead of claiming the requested target. Inspect the physical fan, then use **Tools → Actions → Fan Speed Control: Synchronize state** with its actual percentage (`0` for off) and oscillation. Synchronization sends no IR. Verify the fan is off and synchronize to 0 before first use with toggle-only power.
 

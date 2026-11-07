@@ -1,49 +1,138 @@
-"""Configure command sequences through Home Assistant's action editor."""
+"""Set up and edit a remote-controlled fan with plain command fields."""
 
-import math
+from copy import deepcopy
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
 
-from .const import DOMAIN
+from .config import config_schema
+from .const import DEFAULT_COMMAND_CONFIG, DOMAIN
+
+COMMAND_ACTIONS = {
+    "power_on_command": "turn_on",
+    "power_off_command": "turn_off",
+    "increase_command": "increase",
+    "decrease_command": "decrease",
+    "oscillate_command": "oscillate",
+}
 
 
-def finite_delay(value):
-    """Reject non-finite and negative delays."""
-    value = vol.Coerce(float)(value)
-    if not math.isfinite(value) or not 0 <= value <= 60:
-        raise vol.Invalid("Delay must be between 0 and 60 seconds")
-    return value
+def command_values(config):
+    """Show existing simple commands; keep complex sequences in their action editor."""
+    if not config:
+        return deepcopy(DEFAULT_COMMAND_CONFIG)
+    result = {
+        "name": config["name"],
+        "speed_count": config["speed_count"],
+        "timing": {
+            key: config.get(key, default)
+            for key, default in DEFAULT_COMMAND_CONFIG["timing"].items()
+        },
+    }
+    remotes = set()
+    for field, action in COMMAND_ACTIONS.items():
+        steps = config.get(action, [])
+        if not steps and action == "oscillate":
+            result[field] = ""
+            continue
+        if len(steps) != 1:
+            return None
+        step = steps[0]
+        if set(step) - {"action", "service", "target", "data", "metadata"}:
+            return None
+        if step.get("action", step.get("service")) != "remote.send_command":
+            return None
+        data = step.get("data", {})
+        target = step.get("target", {})
+        if set(data) - {"command", "entity_id"} or set(target) - {"entity_id"}:
+            return None
+        remote = target.get("entity_id", data.get("entity_id"))
+        if isinstance(remote, list) and len(remote) == 1:
+            remote = remote[0]
+        if not isinstance(remote, str) or not isinstance(data.get("command"), str):
+            return None
+        remotes.add(remote)
+        result[field] = data["command"]
+    if len(remotes) != 1:
+        return None
+    result["remote_entity_id"] = remotes.pop()
+    return result
 
 
-def config_schema():
-    """Validate persisted input as well as browser submissions."""
-    actions = vol.All(cv.SCRIPT_SCHEMA, vol.Length(min=1))
+def commands_to_config(values):
+    """Compile plain codes into the existing action engine's configuration."""
+    remote = cv.entity_id(values["remote_entity_id"])
+    if not remote.startswith("remote."):
+        raise vol.Invalid("Select a remote entity")
+    config = {
+        "name": values["name"],
+        "speed_count": values["speed_count"],
+        **values["timing"],
+    }
+    for field, action in COMMAND_ACTIONS.items():
+        command = cv.string(values[field]).strip()
+        if not command:
+            if action == "oscillate":
+                continue
+            raise vol.Invalid("A command is required", path=[field])
+        config[action] = [
+            {
+                "action": "remote.send_command",
+                "target": {"entity_id": remote},
+                "data": {"command": command},
+            }
+        ]
+    config_schema()(config)
+    return config
+
+
+def command_schema(values):
+    """Native remote picker, paste-code fields, and collapsed tuning settings."""
+    timing = {}
+    for key, value in values["timing"].items():
+        timing[vol.Required(key, default=value)] = (
+            selector.BooleanSelector()
+            if key.startswith("wrap_")
+            else selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0 if key.endswith("delay") else 1,
+                    max=60 if key.endswith("delay") else 100,
+                    step=0.1 if key.endswith("delay") else 1,
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            )
+        )
     return vol.Schema(
         {
-            vol.Required("name"): vol.All(cv.string, vol.Length(min=1)),
-            vol.Required("speed_count", default=10): vol.All(
-                vol.Coerce(int), vol.Range(min=1, max=100)
+            vol.Required("name", default=values["name"]): selector.TextSelector(),
+            vol.Required(
+                "remote_entity_id", default=values["remote_entity_id"]
+            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="remote")),
+            vol.Required(
+                "speed_count", default=values["speed_count"]
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=1, max=100, mode=selector.NumberSelectorMode.BOX
+                )
             ),
-            vol.Required("power_on_percentage", default=10): vol.All(
-                vol.Coerce(int), vol.Range(min=1, max=100)
-            ),
-            vol.Required("command_delay", default=1.0): finite_delay,
-            vol.Required("startup_delay", default=1.0): finite_delay,
-            vol.Required("wrap_increase", default=False): cv.boolean,
-            vol.Required("wrap_decrease", default=False): cv.boolean,
             **{
-                vol.Required(key): actions
-                for key in ("turn_on", "turn_off", "increase", "decrease")
+                (vol.Optional if key == "oscillate_command" else vol.Required)(
+                    key, default=values[key]
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True))
+                for key in COMMAND_ACTIONS
             },
-            vol.Optional("oscillate"): actions,
+            vol.Optional("timing", default=values["timing"]): section(
+                vol.Schema(timing), {"collapsed": True}
+            ),
         }
     )
 
 
-def form_schema(values):
+def advanced_schema(values):
     """Show native selectors without storing compiled template objects."""
     fields = {}
     for key in config_schema().schema:
@@ -67,37 +156,68 @@ def form_schema(values):
     return vol.Schema(fields)
 
 
-class FanSpeedControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """One config entry per independently controlled fan."""
+class FanConfigurationForm:
+    """Share setup, reconfigure and Configure behavior without duplicating validation."""
 
-    VERSION = 1
-
-    async def async_step_user(self, user_input=None):
-        """Create a fan, keeping raw serializable action data."""
-        return await self._async_form("user", user_input)
-
-    async def async_step_reconfigure(self, user_input=None):
-        """Edit commands without replacing the entity's identity."""
-        return await self._async_form("reconfigure", user_input)
-
-    async def _async_form(self, step, user_input):
-        entry = self._get_reconfigure_entry() if step == "reconfigure" else None
-        values = dict(entry.data) if entry else {}
+    async def _async_form(self, step, user_input, entry=None):
+        current = dict(entry.options or entry.data) if entry else {}
+        values = command_values(current)
         errors = {}
         if user_input is not None:
-            values = user_input
+            if values is None:
+                draft = {**current, **user_input}
+            else:
+                values = {
+                    **values,
+                    **user_input,
+                    "timing": {**values["timing"], **user_input.get("timing", {})},
+                }
             try:
-                config_schema()(user_input)
+                if values is not None:
+                    draft = commands_to_config(values)
+                config_schema()(draft)
             except vol.Invalid:
                 errors["base"] = "invalid_config"
             else:
+                if step == "init":
+                    return self.async_create_entry(title="", data=draft)
                 if entry:
                     return self.async_update_reload_and_abort(
-                        entry, title=user_input["name"], data=user_input
+                        entry, title=draft["name"], data=draft, options={}
                     )
-                return self.async_create_entry(
-                    title=user_input["name"], data=user_input
-                )
+                return self.async_create_entry(title=draft["name"], data=draft)
         return self.async_show_form(
-            step_id=step, data_schema=form_schema(values), errors=errors
+            step_id=step,
+            data_schema=advanced_schema(current)
+            if values is None
+            else command_schema(values),
+            errors=errors,
         )
+
+
+class FanSpeedControlConfigFlow(
+    FanConfigurationForm, config_entries.ConfigFlow, domain=DOMAIN
+):
+    """One device integration entry per fan."""
+
+    VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return FanSpeedControlOptionsFlow()
+
+    async def async_step_user(self, user_input=None):
+        return await self._async_form("user", user_input)
+
+    async def async_step_reconfigure(self, user_input=None):
+        return await self._async_form(
+            "reconfigure", user_input, self._get_reconfigure_entry()
+        )
+
+
+class FanSpeedControlOptionsFlow(FanConfigurationForm, config_entries.OptionsFlow):
+    """The integration's normal Configure button."""
+
+    async def async_step_init(self, user_input=None):
+        return await self._async_form("init", user_input, self.config_entry)
