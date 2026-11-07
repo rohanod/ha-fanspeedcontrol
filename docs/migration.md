@@ -14,7 +14,7 @@ Before cutover, search every consumer of the old fan ID and helper IDs, includin
 2. Install the native integration files using Marketplace/HACS as category **Integration**, or copy its component folder manually. Leave the old template fan active until installation has succeeded. Restart HA if required.
 3. Prepare configuration using the existing transmitter actions. Copy only the power transmission commands into power actions, not their old helper conditions/updates. Copy `service_data_increase` and `service_data_decrease` into corresponding service actions. Copy oscillation transmission actions without the old helper update. Copy speed count, delays, startup assumption, and wrap flags.
 4. Create the new integration entry but do not operate it while the old controller remains active. HA may assign it `fan.bedroom_fan_2` because the old ID is occupied.
-5. Remove only the old template fan definition from its YAML package (keep a recoverable copy), validate configuration, then reload template entities. Preserve other templates and helpers. Do not delete the original entity registry entry: rename it to `fan.bedroom_fan_legacy`, then rename the native entity to `fan.bedroom_fan`. This leaves a reversible registry path without rewriting consumers.
+5. Disable the old template entity in the entity registry and rename it to `fan.bedroom_fan_legacy`, then rename the native entity to `fan.bedroom_fan`. Leave the original YAML package intact: its registered unique ID now resolves to the disabled legacy entity, including after restart. This leaves a reversible registry path without rewriting consumers or removing configuration.
 6. Physically verify the fan's state. Call `fan_speed_control.sync_state` on the new fan with the actual percentage (0 when off) and oscillation. This sends no IR and seeds the estimate before control begins.
 7. Verify identity, expected supported features, power, 10% → 50% → 20%, oscillation, and a scene that turns an off fan on at a requested percentage. Check physical response; software success cannot prove IR reception. Reload/restart and check restoration without unexpected commands.
 8. Re-search consumers. Every existing fan consumer should still target the native fan. Review direct helper writers and direct remote/calibration scripts separately; they bypass state tracking. Prefer `sync_state` after any physical calibration.
@@ -23,7 +23,7 @@ Do not remove old helpers, the legacy registry entry, or the Python script durin
 
 ## Rollback
 
-Disable the new config entry. Rename the native entity away from the original ID, rename the legacy registry entry back, restore the original template fan YAML, validate, and reload templates. Restore any explicitly changed consumers from their saved configs. Set the original helpers to the physically verified state before using the template fan again. No full HA backup restore is needed for this scoped rollback.
+Disable the new config entry. Rename the native entity away from the original ID, rename the legacy registry entry back and re-enable it, then reload templates. The original YAML and helpers were retained. Restore any explicitly changed consumers from their saved configs. Set the original helpers to the physically verified state before using the template fan again. No full HA backup restore is needed for this scoped rollback.
 
 ## Bedroom fan inspection — 7 November 2026
 
@@ -33,4 +33,4 @@ The same package contains `input_select.transport_lcd_mode`; retain it. Search f
 
 Local, ignored `.migration/` contains the original fan package, proposed replacement package retaining all helpers and the transport selector, and native entry configuration using the existing IR codes. These are preparation artifacts; their presence does not mean anything has been deployed.
 
-Marketplace reported its first-run warning unaccepted during inspection. Installation must wait for the user to accept it. The new integration source also needs publishing to an installable repository revision before Marketplace can download it.
+The warning was subsequently accepted, source published to `master`, and the integration installed through Marketplace (repository ID `1178998417`). Native entry `01M6TXV721VTV7NSWK8S329FRF` now owns `fan.bedroom_fan`; the original template entity is disabled as `fan.bedroom_fan_legacy`. Its YAML and helpers remain intact. Migration copied the previous estimate (on, 50%, oscillation off) without transmitting IR; this is not independent physical verification.

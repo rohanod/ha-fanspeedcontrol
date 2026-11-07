@@ -67,17 +67,26 @@ class ActionFan(FanEntity, RestoreEntity):
         self._attr_speed_count = config["speed_count"]
         self._lock = asyncio.Lock()
         self._removing = False
-        self._scripts = {
-            key: Script(hass, config[key], f"{unique_id}_{key}", DOMAIN, logger=_LOGGER)
-            for key in ("turn_on", "turn_off", "increase", "decrease", "oscillate")
-            if key in config
-        }
-        if "oscillate" in self._scripts:
+        self._scripts = {}
+        if "oscillate" in config:
             self._attr_supported_features |= FanEntityFeature.OSCILLATE
 
     async def async_added_to_hass(self):
         """Restore estimates only; a restart never presses remote buttons."""
         await super().async_added_to_hass()
+        # Registry renames remove and re-add the same entity instance.
+        self._removing = False
+        self._scripts = {
+            key: Script(
+                self.hass,
+                self._config[key],
+                f"{self.unique_id}_{key}",
+                DOMAIN,
+                logger=_LOGGER,
+            )
+            for key in ("turn_on", "turn_off", "increase", "decrease", "oscillate")
+            if key in self._config
+        }
         state = await self.async_get_last_state()
         if state and state.state not in (STATE_ON, STATE_OFF):
             self._attr_is_on = None

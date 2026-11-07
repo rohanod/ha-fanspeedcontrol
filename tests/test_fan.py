@@ -160,3 +160,20 @@ async def test_restore_unknown_does_not_assume_off(hass, fan_config):
     with pytest.raises(HomeAssistantError, match="Power unknown"):
         await command(hass, "turn_on")
     assert calls == []
+
+
+async def test_registry_rename_keeps_actions_usable(hass, fan_config, entity_registry):
+    _, calls = await setup_fan(hass, fan_config)
+    entity_registry.async_update_entity("fan.bedroom_fan", new_entity_id="fan.renamed")
+    await hass.async_block_till_done()
+    await hass.services.async_call(
+        "fan",
+        "set_percentage",
+        {
+            "entity_id": "fan.renamed",
+            "percentage": 30,
+        },
+        blocking=True,
+    )
+    assert calls == ["turn_on", "increase", "increase"]
+    assert hass.states.get("fan.renamed").attributes["percentage"] == 30
