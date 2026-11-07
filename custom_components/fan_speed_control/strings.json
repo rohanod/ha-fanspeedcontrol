@@ -1,0 +1,49 @@
+{
+  "title": "Fan Speed Control",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Fan Speed Control",
+        "description": "Configure actions for one fan. Each speed action must move exactly one step. Do not call this fan from its own actions. For toggle-only power, first verify the fan is off. Oscillation actions receive the boolean variable oscillating.",
+        "data": {
+          "name": "Name",
+          "speed_count": "Number of speeds",
+          "power_on_percentage": "Speed after power on (%)",
+          "command_delay": "Delay between speed commands (seconds)",
+          "startup_delay": "Delay after power on (seconds)",
+          "wrap_increase": "Increasing wraps from maximum to minimum",
+          "wrap_decrease": "Decreasing wraps from minimum to maximum",
+          "turn_on": "Power on actions",
+          "turn_off": "Power off actions",
+          "increase": "Increase one speed step",
+          "decrease": "Decrease one speed step",
+          "oscillate": "Oscillation actions (optional)"
+        }
+      },
+      "reconfigure": {
+        "title": "Fan Speed Control",
+        "description": "Configure actions for one fan. Each speed action must move exactly one step. Do not call this fan from its own actions. For toggle-only power, first verify the fan is off. Oscillation actions receive the boolean variable oscillating.",
+        "data": {
+          "name": "Name",
+          "speed_count": "Number of speeds",
+          "power_on_percentage": "Speed after power on (%)",
+          "command_delay": "Delay between speed commands (seconds)",
+          "startup_delay": "Delay after power on (seconds)",
+          "wrap_increase": "Increasing wraps from maximum to minimum",
+          "wrap_decrease": "Decreasing wraps from minimum to maximum",
+          "turn_on": "Power on actions",
+          "turn_off": "Power off actions",
+          "increase": "Increase one speed step",
+          "decrease": "Decrease one speed step",
+          "oscillate": "Oscillation actions (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Check speed count, percentages, finite delays (0\u201360 seconds), and nonempty valid action sequences."
+    },
+    "abort": {
+      "reconfigure_successful": "Fan configuration updated."
+    }
+  }
+}

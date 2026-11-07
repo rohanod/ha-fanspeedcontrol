@@ -1,2 +1,9 @@
 .vscode/
 .DS_Store
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.migration/

@@ -1,0 +1,22 @@
+sync_state:
+  name: Synchronize state
+  description: Record the physically verified speed and oscillation without transmitting commands. Use 0 when the fan is off.
+  target:
+    entity:
+      integration: fan_speed_control
+      domain: fan
+  fields:
+    percentage:
+      name: Percentage
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: box
+    oscillating:
+      name: Oscillating
+      default: false
+      selector:
+        boolean:

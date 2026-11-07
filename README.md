@@ -1,128 +1,56 @@
-# HA-FanSpeedControl
+# Fan Speed Control
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
-[![Donate](https://img.shields.io/badge/donate-Coffee-yellow.svg)](https://www.buymeacoffee.com/dodoro)
+A native Home Assistant custom integration for fans controlled by incremental remote commands. Configure one fan per entry using the UI action editor; Broadlink `remote.send_command`, scripts, and other Home Assistant actions work without extra runtime dependencies.
 
-A python script for Home Assistant that controls fan speed with [Template Fan](https://www.home-assistant.io/integrations/template/#fan) and [Broadlink](https://www.home-assistant.io/integrations/broadlink/).
+Requires **Home Assistant 2026.11.0+**. Install as an **Integration** in the built-in Marketplace or HACS, not as a Python Script. This repository is a custom repository, not an official Core integration or a default Marketplace listing.
 
-# Document
+## Install
 
-- [Documentation](https://github.com/rohanod/ha-fanspeedcontrol/blob/main/README.md)
+1. In Marketplace, accept its first-run warning and connect GitHub if prompted.
+2. Add `rohanod/ha-fanspeedcontrol` as a custom repository, category **Integration**. Install the integration release containing `custom_components/fan_speed_control/`.
+3. Restart Home Assistant, then **Settings → Devices & services → Add integration → Fan Speed Control**.
+4. Enter the fan's name, speed count, startup speed, delays, and four action sequences: power on, power off, increase one step, decrease one step. Optional oscillation actions receive the boolean template variable `oscillating`.
 
-# How it work
+Manual installation: copy `custom_components/fan_speed_control` into your HA configuration's `custom_components` folder, restart, and add it through the UI.
 
-The script automatically calls the configured Broadlink action when you set fan speed.
+Each speed action must send exactly **one** press. Use unconditional transmitter actions, with errors propagated. Do not call this fan entity from its own actions; that would recurse. If using an existing script, call `script.<script_name>` directly so HA waits for completion; `script.turn_on` is fire-and-forget and cannot confirm completion.
 
-## Example
+For Broadlink, choose `remote.send_command`, target your remote, and enter the learned command (or `b64:...`). The power-on and power-off sequences may use the same IR toggle command: this integration sends it only on a tracked power transition.
 
-If your fan exposes 10 discrete speed steps, store the requested helper speed as
-`10, 20, 30 ... 100`. The fan entity itself still uses `0` for the off state.
+## Behavior
 
-example1: call `increase` 4 times when you set fan speed from `10` to `50`.
+- Normal `fan.turn_on`, `fan.turn_off`, `fan.set_percentage`, scenes, and oscillation services.
+- Requests serialize per fan, including power, speed, oscillation, and synchronization.
+- Percentage 0 is off. Nonzero percentages map to the nearest discrete speed, preserving the legacy script's rounding. Example: ten speeds, 10% → 50% sends four increases.
+- Startup uses the configured power-on speed and waits before adjusting. Set this to the fan's actual startup behavior; IR cannot detect a remembered physical speed.
+- Repeated presses wait `command_delay` seconds between them. Wrapping is disabled by default; enable each direction only if your fan supports it.
+- State restores on restart without sending commands. No polling or external speed/power helpers required.
+- Reconfigure commands through the entry's **Reconfigure** menu without replacing its entity identity.
 
-example2: call `decrease` 3 times when you set fan speed from `50` to `20`.
+IR is one-way: state is an estimate. Missed commands, the physical remote, and power loss can cause drift. An action error invalidates the affected estimate instead of claiming the requested target. Inspect the physical fan, then use **Tools → Actions → Fan Speed Control: Synchronize state** with its actual percentage (`0` for off) and oscillation. Synchronization sends no IR. Verify the fan is off and synchronize to 0 before first use with toggle-only power.
 
-example3: call `increase` 8 times when you set fan speed from `20` to `100`.
+Oscillation is likewise estimated. Configure actions that set the desired state using `oscillating`, or a single toggle command if the physical oscillation state is known. Synchronize after using the physical remote.
 
-# Installation
+## Migrate from the Python Script
 
-Enable [python_script](https://www.home-assistant.io/integrations/python_script/) for Home Assistant.
+See [migration guide](docs/migration.md). The old script and [legacy YAML example](examples/configuration.yaml) remain available for rollback; they are not used by the integration. Do not run two controllers for the same physical fan.
 
-- Add to `configuration.yaml`: `python_script:`
-- Create folder `<config>/python_scripts`
-- restart Home Assistant
+## Tests and cloud setup
 
-If you use HACS, add this repository as a custom repository with type `Python Script`.
+Home Assistant 2026.11 provides the official [`pytest-homeassistant`](https://github.com/home-assistant/core/tree/2026.11.0/packages/pytest-homeassistant) package. It creates a real test Home Assistant instance and supplies config-entry, service, registry, time, and restore-state fixtures. It replaces `pytest-homeassistant-custom-component`; do not install both.
 
-Or copy the Python script into your `<config>/python_scripts` directory and call `python_script.reload`.
+With `uv` available, run locally or in a Codex Cloud checkout:
 
-# Script arguments
-
-|key|required|type|description|
-|-|-|-|-|
-|fan_speed|true|string|target percentage from the fan entity (`0` turns off, non-zero values are mapped to steps)|
-|fan_speed_entity_id|true|string||
-|fan_entity_id|true|string||
-|fan_speed_count|true|integer||
-|command_delay|false|float|seconds to wait between repeated commands, default `1.0`|
-|startup_delay|false|float|seconds to wait after turning the fan on before adjusting speed, default `1.0`|
-|power_on_percentage|false|integer|assumed startup speed after power on, default is the minimum speed step|
-|wrap_increase|false|boolean|allow wraparound when increasing past the maximum speed, default `false`|
-|wrap_decrease|false|boolean|allow wraparound when decreasing past the minimum speed, default `false`|
-|service_domain|true|string||
-|service|true|string||
-|service_data_increase|true|object||
-|service_data_decrease|true|object||
-
-# Config Example
-
-`set_percentage` on a modern template fan
-
-```yaml
-set_percentage:
-  - action: python_script.fan_speed_control
-    data:
-      fan_speed: "{{ percentage }}"
-      fan_speed_entity_id: 'input_number.status_fan_speed'
-      fan_entity_id: 'fan.bedroom_fan'
-      fan_speed_count: 10
-      command_delay: 1.0
-      startup_delay: 1.0
-      power_on_percentage: 10
-      service_domain: 'remote'
-      service: 'send_command'
-      service_data_increase:
-        entity_id: remote.broadlink
-        command: "b64:..."
-      service_data_decrease:
-        entity_id: remote.broadlink
-        command: "b64:..."
+```sh
+bash scripts/setup-test-env.sh
+.venv/bin/ruff check custom_components tests
+.venv/bin/ruff format --check custom_components tests
 ```
 
-## Template Fan config
+The setup script provisions Python 3.14, installs exact Home Assistant and official pytest package version **2026.11.0**, and runs tests. Cloud setup needs package-index/Python-download network access. Tests mock the transmitter at the service boundary; they exercise the real config flow, fan service dispatch, action engine, restoration, concurrency, failure handling, and unloading. They do not transmit IR or prove physical reception.
 
-Use the complete modern template fan example in [examples/configuration.yaml](/Users/rohan/HA-FanSpeedControl/examples/configuration.yaml).
+GitHub Actions runs the same tests on Linux, plus official `hassfest` and HACS integration validation. A custom integration's brand assets/default listing require separate upstream submissions; those are not implied by successful code tests.
 
-# Debug
+## Legacy
 
-add logger to your `configuration.yaml`
-
-```yaml
-logger:
-  default: warn
-  logs:
-    homeassistant.components.python_script.fan_speed_control.py: debug
-```
-
-## Sample configuration
-
-See [examples/configuration.yaml](/Users/rohan/HA-FanSpeedControl/examples/configuration.yaml) for a complete modern template fan example using:
-
-- `input_number.status_fan_speed` with `10..100` and `step: 10`
-- `percentage: 0` only when the fan is actually off
-- `speed_count: 10`
-- `command_delay: 1.0` for slower repeated presses
-- `startup_delay: 1.0` and `power_on_percentage: 10` for scene-safe power-on-to-target changes
-- no wraparound by default, so `30 -> 100` increases seven steps instead of incorrectly decreasing to `10`
-- Broadlink `b64:` commands
-
-# Screenshot
-
-![image](https://github.com/rohanod/ha-fanspeedcontrol/blob/main/Screenshot/fan.png?raw=true)
-
-## Custom ui
-
-![image](https://github.com/rohanod/ha-fanspeedcontrol/blob/main/Screenshot/fanui.png?raw=true)
-
-# Todos
-
-- [ ] Refactor arguments, like: remove not used argument `service`
-- [ ] Find some way to get `entity.state` and `fan speed` not by arguments
-
-<br><br>
-<p align="center">
-<br>
-<a href="https://www.buymeacoffee.com/dodoro" target="_blank">
-  <img src="https://github.com/appcraftstudio/buymeacoffee/raw/master/Images/snapshot-bmc-button.png" width="300">
-</a>
-</p>
+The previous installation used `python_script.fan_speed_control`, a template fan, and helpers. Keep their backups until migration is verified. Leave `python_script:` enabled if anything else still uses it.

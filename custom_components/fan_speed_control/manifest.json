@@ -1,0 +1,11 @@
+{
+  "domain": "fan_speed_control",
+  "name": "Fan Speed Control",
+  "codeowners": ["@rohanod"],
+  "config_flow": true,
+  "documentation": "https://github.com/rohanod/ha-fanspeedcontrol",
+  "integration_type": "helper",
+  "iot_class": "assumed_state",
+  "issue_tracker": "https://github.com/rohanod/ha-fanspeedcontrol/issues",
+  "version": "1.0.0"
+}
