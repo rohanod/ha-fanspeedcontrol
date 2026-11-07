@@ -177,3 +177,14 @@ async def test_registry_rename_keeps_actions_usable(hass, fan_config, entity_reg
     )
     assert calls == ["turn_on", "increase", "increase"]
     assert hass.states.get("fan.renamed").attributes["percentage"] == 30
+
+
+async def test_reload_restores_current_state(hass, fan_config):
+    entry, calls = await setup_fan(hass, fan_config)
+    await command(hass, "set_percentage", percentage=50)
+    before = list(calls)
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get("fan.bedroom_fan").state == "on"
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 50
+    assert calls == before
