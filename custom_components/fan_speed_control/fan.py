@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError, TemplateError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.script import Script
+from homeassistant.helpers.template import Template
 
 from .config import config_schema
 from .const import DOMAIN
@@ -237,19 +238,20 @@ class ActionFan(FanEntity, RestoreEntity):
                 raise
             self._attr_oscillating = oscillating
 
-    async def async_sync_state(self, percentage=None, oscillating=None):
+    async def async_sync_state(
+        self, percentage=None, oscillating=None, percentage_template=None
+    ):
         """Record a physically verified state without sending commands."""
         async with self._operation():
             if percentage is None:
-                if (
-                    sync_template := self._config.get("sync_percentage_template")
-                ) is None:
+                if percentage_template is None:
                     raise HomeAssistantError(
-                        "Enter a percentage or configure a synchronization template"
+                        "Enter a percentage or a percentage template"
                     )
-                sync_template.hass = self.hass
                 try:
-                    percentage = float(sync_template.async_render())
+                    percentage = float(
+                        Template(percentage_template, self.hass).async_render()
+                    )
                 except (TemplateError, ValueError, TypeError) as err:
                     raise HomeAssistantError(
                         "Synchronization template must return a percentage from 0 to 100"

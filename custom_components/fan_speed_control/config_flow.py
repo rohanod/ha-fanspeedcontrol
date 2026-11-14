@@ -28,7 +28,6 @@ def command_values(config):
     result = {
         "name": config["name"],
         "speed_count": config["speed_count"],
-        "sync_percentage_template": config.get("sync_percentage_template", ""),
         "timing": {
             key: config.get(key, default)
             for key, default in DEFAULT_COMMAND_CONFIG["timing"].items()
@@ -74,8 +73,6 @@ def commands_to_config(values):
         "speed_count": values["speed_count"],
         **values["timing"],
     }
-    if sync_template := values.get("sync_percentage_template", "").strip():
-        config["sync_percentage_template"] = sync_template
     for field, action in COMMAND_ACTIONS.items():
         command = cv.string(values[field]).strip()
         if not command:
@@ -131,10 +128,6 @@ def command_schema(values):
             vol.Optional("timing", default=values["timing"]): section(
                 vol.Schema(timing), {"collapsed": True}
             ),
-            vol.Optional(
-                "sync_percentage_template",
-                default=values.get("sync_percentage_template", ""),
-            ): selector.TemplateSelector(),
         }
     )
 
@@ -149,8 +142,6 @@ def advanced_schema(values):
             fields[marker] = selector.ActionSelector()
         elif name.startswith("wrap_"):
             fields[marker] = selector.BooleanSelector()
-        elif name == "sync_percentage_template":
-            fields[marker] = selector.TemplateSelector()
         elif name == "name":
             fields[marker] = selector.TextSelector()
         else:

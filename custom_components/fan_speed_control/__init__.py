@@ -25,9 +25,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entity_domain="fan",
             func="async_sync_state",
             schema={
-                vol.Optional("percentage"): vol.All(
+                vol.Exclusive("percentage", "speed"): vol.All(
                     vol.Coerce(int), vol.Range(min=0, max=100)
                 ),
+                vol.Exclusive("percentage_template", "speed"): cv.string,
                 vol.Optional("oscillating"): cv.boolean,
             },
         )

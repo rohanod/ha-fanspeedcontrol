@@ -172,16 +172,3 @@ async def test_device_integration_registration(
     assert (
         await async_get_integration(hass, "fan_speed_control")
     ).integration_type == "device"
-
-
-async def test_saved_sync_template_is_serializable_and_preserved(hass, fan_config):
-    fan_config["sync_percentage_template"] = "{{ states('sensor.actual_speed') }}"
-    entry = MockConfigEntry(domain="fan_speed_control", data=fan_config)
-    entry.add_to_hass(hass)
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(result["flow_id"], {})
-    assert (
-        result["data"]["sync_percentage_template"]
-        == fan_config["sync_percentage_template"]
-    )
-    json.dumps(result["data"])

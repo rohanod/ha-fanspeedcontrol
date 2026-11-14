@@ -287,26 +287,22 @@ async def test_calibration_failure_invalidates_speed(hass, fan_config):
     assert hass.states.get("fan.bedroom_fan").attributes["percentage"] is None
 
 
-async def test_sync_template_is_manual_and_rejects_unavailable(hass, fan_config):
-    fan_config["sync_percentage_template"] = "{{ states('sensor.actual_speed') }}"
+async def test_sync_action_template_rejects_unavailable(hass, fan_config):
     hass.states.async_set("sensor.actual_speed", "60")
     _, calls = await setup_fan(hass, fan_config)
-    assert hass.states.get("fan.bedroom_fan").state == "off"
+    data = {
+        "entity_id": "fan.bedroom_fan",
+        "percentage_template": "{{ states('sensor.actual_speed') }}",
+    }
     await hass.services.async_call(
-        "button",
-        "press",
-        {"entity_id": "button.bedroom_fan_synchronize_from_template"},
-        blocking=True,
+        "fan_speed_control", "sync_state", data, blocking=True
     )
     assert calls == []
     assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 60
     hass.states.async_set("sensor.actual_speed", "unavailable")
     with pytest.raises(HomeAssistantError):
         await hass.services.async_call(
-            "button",
-            "press",
-            {"entity_id": "button.bedroom_fan_synchronize_from_template"},
-            blocking=True,
+            "fan_speed_control", "sync_state", data, blocking=True
         )
     assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 60
 
@@ -348,3 +344,27 @@ async def test_sync_speed_keeps_oscillation_when_omitted(hass, fan_config):
     )
     assert calls == []
     assert hass.states.get("fan.bedroom_fan").attributes["oscillating"] is True
+
+
+async def test_sync_template_works_in_native_action_engine(hass, fan_config):
+    from homeassistant.helpers.script import Script
+
+    _, calls = await setup_fan(hass, fan_config)
+    script = Script(
+        hass,
+        [
+            {
+                "action": "fan_speed_control.sync_state",
+                "target": {"entity_id": "fan.bedroom_fan"},
+                "data": {"percentage_template": "{{ 30 + 20 }}"},
+            }
+        ],
+        "Synchronize",
+        "test",
+    )
+    try:
+        await script.async_run()
+    finally:
+        await script.async_unload()
+    assert calls == []
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 50

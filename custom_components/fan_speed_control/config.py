@@ -35,6 +35,5 @@ def config_schema():
                 for key in ("turn_on", "turn_off", "increase", "decrease")
             },
             vol.Optional("oscillate"): actions,
-            vol.Optional("sync_percentage_template"): cv.template,
         }
     )

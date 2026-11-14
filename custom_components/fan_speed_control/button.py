@@ -12,8 +12,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
             for direction in ("increase", "decrease")
         ]
     )
-    if "sync_percentage_template" in (entry.options or entry.data):
-        async_add_entities([SynchronizeButton(entry.runtime_data)])
 
 
 class CalibrationButton(ButtonEntity):
@@ -39,21 +37,3 @@ class CalibrationButton(ButtonEntity):
     async def async_press(self):
         self._fan.async_set_context(self._context)
         await self._fan.async_calibrate(self._direction)
-
-
-class SynchronizeButton(ButtonEntity):
-    """Read the configured template only when explicitly requested."""
-
-    _attr_has_entity_name = True
-    _attr_entity_category = EntityCategory.CONFIG
-    _attr_name = "Synchronize from template"
-    _attr_icon = "mdi:sync"
-
-    def __init__(self, fan):
-        self._fan = fan
-        self._attr_unique_id = f"{fan.unique_id}_sync_template"
-        self._attr_device_info = fan.device_info
-
-    async def async_press(self):
-        self._fan.async_set_context(self._context)
-        await self._fan.async_sync_state()

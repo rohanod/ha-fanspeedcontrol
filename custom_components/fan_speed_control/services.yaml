@@ -1,6 +1,6 @@
 sync_state:
   name: Synchronize state
-  description: Record speed without transmitting commands. Enter a percentage, or leave it empty to read the saved synchronization template. Use 0 when off; omitted oscillation keeps its current estimate.
+  description: Record speed without transmitting commands. Use either the percentage slider or a percentage template (0 means off). Omitted oscillation keeps its current estimate.
   target:
     entity:
       integration: fan_speed_control
@@ -14,6 +14,12 @@ sync_state:
           max: 100
           step: 1
           mode: slider
+    percentage_template:
+      name: Percentage template
+      description: Return a percentage from 0 to 100, for example {{ states('sensor.actual_fan_speed') }}. Leave the percentage slider unset when using this field.
+      example: "{{ states('sensor.actual_fan_speed') }}"
+      selector:
+        template:
     oscillating:
       name: Oscillating
       selector:
