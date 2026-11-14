@@ -231,3 +231,120 @@ async def test_saved_off_speed_restores_without_transmitting(hass, fan_config):
     assert calls == []
     await command(hass, "turn_on")
     assert calls == ["turn_on"] + ["increase"] * 7
+
+
+@pytest.mark.parametrize(
+    ("direction", "expected"), [("increase", 100), ("decrease", 10)]
+)
+async def test_calibrate_reaches_endpoint(hass, fan_config, direction, expected):
+    from unittest.mock import patch
+
+    _, calls = await setup_fan(hass, fan_config)
+    await command(hass, "turn_on")
+    calls.clear()
+    with patch(
+        "custom_components.fan_speed_control.fan.monotonic", side_effect=[0, *range(11)]
+    ):
+        await hass.services.async_call(
+            "fan_speed_control",
+            "calibrate",
+            {"entity_id": "fan.bedroom_fan", "direction": direction},
+            blocking=True,
+        )
+    assert calls == [direction] * 10
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == expected
+    assert hass.states.get("fan.bedroom_fan").attributes["last_percentage"] == expected
+
+
+async def test_calibration_refuses_wrapping(hass, fan_config):
+    fan_config["wrap_increase"] = True
+    _, calls = await setup_fan(hass, fan_config)
+    with pytest.raises(HomeAssistantError, match="wrap"):
+        await hass.services.async_call(
+            "fan_speed_control",
+            "calibrate",
+            {"entity_id": "fan.bedroom_fan", "direction": "increase"},
+            blocking=True,
+        )
+    assert calls == []
+
+
+async def test_calibration_failure_invalidates_speed(hass, fan_config):
+    await setup_fan(hass, fan_config)
+    await command(hass, "turn_on")
+
+    async def fail(call):
+        raise HomeAssistantError("transmitter failed")
+
+    hass.services.async_register("remote", "send_command", fail)
+    with pytest.raises(HomeAssistantError, match="transmitter failed"):
+        await hass.services.async_call(
+            "fan_speed_control",
+            "calibrate",
+            {"entity_id": "fan.bedroom_fan", "direction": "decrease"},
+            blocking=True,
+        )
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] is None
+
+
+async def test_sync_template_is_manual_and_rejects_unavailable(hass, fan_config):
+    fan_config["sync_percentage_template"] = "{{ states('sensor.actual_speed') }}"
+    hass.states.async_set("sensor.actual_speed", "60")
+    _, calls = await setup_fan(hass, fan_config)
+    assert hass.states.get("fan.bedroom_fan").state == "off"
+    await hass.services.async_call(
+        "button",
+        "press",
+        {"entity_id": "button.bedroom_fan_synchronize_from_template"},
+        blocking=True,
+    )
+    assert calls == []
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 60
+    hass.states.async_set("sensor.actual_speed", "unavailable")
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "button",
+            "press",
+            {"entity_id": "button.bedroom_fan_synchronize_from_template"},
+            blocking=True,
+        )
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 60
+
+
+async def test_calibration_sends_enough_steps_even_after_ten_seconds(hass, fan_config):
+    from unittest.mock import patch
+
+    fan_config["speed_count"] = 20
+    _, calls = await setup_fan(hass, fan_config)
+    await command(hass, "turn_on")
+    calls.clear()
+    with patch(
+        "custom_components.fan_speed_control.fan.monotonic", side_effect=[0] + [20] * 21
+    ):
+        await hass.services.async_call(
+            "fan_speed_control",
+            "calibrate",
+            {"entity_id": "fan.bedroom_fan", "direction": "decrease"},
+            blocking=True,
+        )
+    assert calls == ["decrease"] * 19
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 5
+
+
+async def test_sync_speed_keeps_oscillation_when_omitted(hass, fan_config):
+    fan_config["oscillate"] = fan_config["increase"]
+    _, calls = await setup_fan(hass, fan_config)
+    await hass.services.async_call(
+        "fan_speed_control",
+        "sync_state",
+        {"entity_id": "fan.bedroom_fan", "percentage": 40, "oscillating": True},
+        blocking=True,
+    )
+    await hass.services.async_call(
+        "fan_speed_control",
+        "sync_state",
+        {"entity_id": "fan.bedroom_fan", "percentage": 60},
+        blocking=True,
+    )
+    assert calls == []
+    assert hass.states.get("fan.bedroom_fan").attributes["oscillating"] is True

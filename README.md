@@ -58,3 +58,16 @@ GitHub Actions runs the same tests on Linux, plus official `hassfest` and HACS i
 ## Legacy
 
 The previous installation used `python_script.fan_speed_control`, a template fan, and helpers. Keep their backups until migration is verified. Leave `python_script:` enabled if anything else still uses it.
+
+## Synchronize and calibrate
+
+On the fan's device page:
+
+- **Calibrate to maximum** repeatedly sends speed-up, then records 100%.
+- **Calibrate to minimum** repeatedly sends speed-down, then records the minimum step (10% for ten speeds).
+
+Calibration repeats for at least ten seconds, using your command delay. It continues longer if necessary to send enough presses to span every speed step. A fan known to be off is powered on first; unknown power must be synchronized first. Only use calibration where commands stop at the endpoint; a direction configured to wrap is rejected. Other commands wait until calibration finishes. A failed or interrupted calibration marks speed unknown rather than claiming success. IR reception still cannot be verified by software.
+
+For synchronization without IR, **Configure → Synchronization template** accepts a number or Jinja template, such as `{{ states('sensor.actual_fan_speed') }}`. Save it to add **Synchronize from template** to the device page. Pressing this button reads the template once; it never runs automatically. Invalid, unavailable, or out-of-range results leave the tracked state unchanged.
+
+The **Synchronize state** action also accepts a percentage slider. Leave percentage out to use the saved template. Omitted oscillation preserves its current estimate. No extra helpers or YAML are required.

@@ -2,11 +2,13 @@
 
 import asyncio
 import logging
+import math
 from contextlib import asynccontextmanager
+from time import monotonic
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, TemplateError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.script import Script
@@ -44,7 +46,8 @@ def choose_direction(current, target, count, wrap_increase, wrap_decrease):
 async def async_setup_entry(hass, entry, async_add_entities):
     """Validate and add a fan without transmitting at startup."""
     config = config_schema()(dict(entry.options or entry.data))
-    async_add_entities([ActionFan(hass, entry.entry_id, config)])
+    entry.runtime_data = ActionFan(hass, entry.entry_id, config)
+    async_add_entities([entry.runtime_data])
 
 
 class ActionFan(FanEntity, RestoreEntity):
@@ -234,13 +237,63 @@ class ActionFan(FanEntity, RestoreEntity):
                 raise
             self._attr_oscillating = oscillating
 
-    async def async_sync_state(self, percentage, oscillating=False):
+    async def async_sync_state(self, percentage=None, oscillating=None):
         """Record a physically verified state without sending commands."""
         async with self._operation():
+            if percentage is None:
+                if (
+                    sync_template := self._config.get("sync_percentage_template")
+                ) is None:
+                    raise HomeAssistantError(
+                        "Enter a percentage or configure a synchronization template"
+                    )
+                sync_template.hass = self.hass
+                try:
+                    percentage = float(sync_template.async_render())
+                except (TemplateError, ValueError, TypeError) as err:
+                    raise HomeAssistantError(
+                        "Synchronization template must return a percentage from 0 to 100"
+                    ) from err
+                if not math.isfinite(percentage) or not 0 <= percentage <= 100:
+                    raise HomeAssistantError(
+                        "Synchronization template must return a percentage from 0 to 100"
+                    )
             self._attr_is_on = percentage > 0
             self._attr_percentage = step_to_percentage(
                 percentage_to_step(percentage, self.speed_count), self.speed_count
             )
-            self._attr_oscillating = oscillating if percentage else False
+            if not percentage:
+                self._attr_oscillating = False
+            elif oscillating is not None:
+                self._attr_oscillating = oscillating
             if percentage:
                 self._last_percentage = self._attr_percentage
+
+    async def async_calibrate(self, direction):
+        """Drive a non-wrapping fan to a known endpoint before updating its estimate."""
+        async with self._operation():
+            if self._config[f"wrap_{direction}"]:
+                raise HomeAssistantError("Cannot calibrate a direction that wraps")
+            if self._attr_is_on is None:
+                raise HomeAssistantError(
+                    "Power unknown; synchronize the physical power state first"
+                )
+            if not self._attr_is_on:
+                await self._set_percentage(self._config["power_on_percentage"])
+            try:
+                deadline = monotonic() + 10
+                presses = 0
+                while monotonic() < deadline or presses < self.speed_count - 1:
+                    await self._run(direction)
+                    presses += 1
+                    if self._config["command_delay"]:
+                        await asyncio.sleep(self._config["command_delay"])
+                self._attr_percentage = (
+                    100
+                    if direction == "increase"
+                    else step_to_percentage(1, self.speed_count)
+                )
+                self._last_percentage = self._attr_percentage
+            except (Exception, asyncio.CancelledError):
+                self._attr_percentage = None
+                raise

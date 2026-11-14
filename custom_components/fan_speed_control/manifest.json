@@ -7,5 +7,5 @@
   "integration_type": "device",
   "iot_class": "assumed_state",
   "issue_tracker": "https://github.com/rohanod/ha-fanspeedcontrol/issues",
-  "version": "1.1.1"
+  "version": "1.2.0"
 }

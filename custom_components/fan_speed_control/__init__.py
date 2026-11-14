@@ -9,12 +9,13 @@ from homeassistant.helpers import service
 
 from .const import DOMAIN
 
-PLATFORMS = [Platform.FAN]
+PLATFORMS = [Platform.FAN, Platform.BUTTON]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Forward each fan configuration to the fan platform."""
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.FAN])
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.BUTTON])
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     if not hass.services.has_service(DOMAIN, "sync_state"):
         service.async_register_platform_entity_service(
@@ -24,11 +25,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entity_domain="fan",
             func="async_sync_state",
             schema={
-                vol.Required("percentage"): vol.All(
+                vol.Optional("percentage"): vol.All(
                     vol.Coerce(int), vol.Range(min=0, max=100)
                 ),
-                vol.Optional("oscillating", default=False): cv.boolean,
+                vol.Optional("oscillating"): cv.boolean,
             },
+        )
+    if not hass.services.has_service(DOMAIN, "calibrate"):
+        service.async_register_platform_entity_service(
+            hass,
+            DOMAIN,
+            "calibrate",
+            entity_domain="fan",
+            func="async_calibrate",
+            schema={vol.Required("direction"): vol.In(["increase", "decrease"])},
         )
     return True
 

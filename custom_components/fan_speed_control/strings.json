@@ -23,7 +23,8 @@
           "power_off_command": "Power off code",
           "increase_command": "Speed up code",
           "decrease_command": "Speed down code",
-          "oscillate_command": "Oscillation code (optional)"
+          "oscillate_command": "Oscillation code (optional)",
+          "sync_percentage_template": "Synchronization template (optional)"
         },
         "data_description": {
           "remote_entity_id": "The Broadlink or other remote that sends the commands.",
@@ -31,7 +32,8 @@
           "power_off_command": "For a power toggle, use the same code as Power on.",
           "increase_command": "One press must increase the fan by one speed step.",
           "decrease_command": "One press must decrease the fan by one speed step.",
-          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan."
+          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan.",
+          "sync_percentage_template": "Return the actual percentage, 0\u2013100 (0 means off). The Synchronize from template button reads it without sending IR. It never runs automatically."
         },
         "sections": {
           "timing": {
@@ -73,7 +75,8 @@
           "power_off_command": "Power off code",
           "increase_command": "Speed up code",
           "decrease_command": "Speed down code",
-          "oscillate_command": "Oscillation code (optional)"
+          "oscillate_command": "Oscillation code (optional)",
+          "sync_percentage_template": "Synchronization template (optional)"
         },
         "data_description": {
           "remote_entity_id": "The Broadlink or other remote that sends the commands.",
@@ -81,7 +84,8 @@
           "power_off_command": "For a power toggle, use the same code as Power on.",
           "increase_command": "One press must increase the fan by one speed step.",
           "decrease_command": "One press must decrease the fan by one speed step.",
-          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan."
+          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan.",
+          "sync_percentage_template": "Return the actual percentage, 0\u2013100 (0 means off). The Synchronize from template button reads it without sending IR. It never runs automatically."
         },
         "sections": {
           "timing": {
@@ -133,7 +137,8 @@
           "power_off_command": "Power off code",
           "increase_command": "Speed up code",
           "decrease_command": "Speed down code",
-          "oscillate_command": "Oscillation code (optional)"
+          "oscillate_command": "Oscillation code (optional)",
+          "sync_percentage_template": "Synchronization template (optional)"
         },
         "data_description": {
           "remote_entity_id": "The Broadlink or other remote that sends the commands.",
@@ -141,7 +146,8 @@
           "power_off_command": "For a power toggle, use the same code as Power on.",
           "increase_command": "One press must increase the fan by one speed step.",
           "decrease_command": "One press must decrease the fan by one speed step.",
-          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan."
+          "oscillate_command": "Leave blank to disable oscillation control. Toggle codes require the tracked state to match the physical fan.",
+          "sync_percentage_template": "Return the actual percentage, 0\u2013100 (0 means off). The Synchronize from template button reads it without sending IR. It never runs automatically."
         },
         "sections": {
           "timing": {

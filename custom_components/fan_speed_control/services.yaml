@@ -1,6 +1,6 @@
 sync_state:
   name: Synchronize state
-  description: Record the physically verified speed and oscillation without transmitting commands. Use 0 when the fan is off.
+  description: Record speed without transmitting commands. Enter a percentage, or leave it empty to read the saved synchronization template. Use 0 when off; omitted oscillation keeps its current estimate.
   target:
     entity:
       integration: fan_speed_control
@@ -8,15 +8,32 @@ sync_state:
   fields:
     percentage:
       name: Percentage
-      required: true
       selector:
         number:
           min: 0
           max: 100
           step: 1
-          mode: box
+          mode: slider
     oscillating:
       name: Oscillating
-      default: false
       selector:
         boolean:
+calibrate:
+  name: Calibrate speed
+  description: Repeat speed commands for at least 10 seconds to reach an endpoint, then synchronize the speed. Turns on a fan known to be off. Only use with directions that stop at the endpoint, not wrap around.
+  target:
+    entity:
+      integration: fan_speed_control
+      domain: fan
+  fields:
+    direction:
+      name: Direction
+      required: true
+      default: increase
+      selector:
+        select:
+          options:
+            - label: Maximum speed (up)
+              value: increase
+            - label: Minimum speed (down)
+              value: decrease
