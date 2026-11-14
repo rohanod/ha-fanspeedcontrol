@@ -70,6 +70,7 @@ class ActionFan(FanEntity, RestoreEntity):
             model="Remote-controlled fan",
         )
         self._config = config
+        self._last_percentage = config["power_on_percentage"]
         self._attr_speed_count = config["speed_count"]
         self._lock = asyncio.Lock()
         self._removing = False
@@ -113,6 +114,20 @@ class ActionFan(FanEntity, RestoreEntity):
                 else 0
             )
             self._attr_oscillating = state.attributes.get("oscillating", False) is True
+        if state:
+            last_percentage = state.attributes.get("last_percentage")
+            if self._attr_is_on and self._attr_percentage is not None:
+                last_percentage = self._attr_percentage
+            if (
+                isinstance(last_percentage, (int, float))
+                and 1 <= last_percentage <= 100
+            ):
+                self._last_percentage = last_percentage
+
+    @property
+    def extra_state_attributes(self):
+        """Keep the resume speed restorable while the visible off percentage is zero."""
+        return {"last_percentage": self._last_percentage}
 
     async def async_will_remove_from_hass(self):
         """Stop scripts and wait for commands to leave their critical section."""
@@ -147,9 +162,7 @@ class ActionFan(FanEntity, RestoreEntity):
                 percentage
                 if percentage is not None
                 else (
-                    self._attr_percentage
-                    if self._attr_is_on
-                    else self._config["power_on_percentage"]
+                    self._attr_percentage if self._attr_is_on else self._last_percentage
                 )
             )
 
@@ -200,6 +213,7 @@ class ActionFan(FanEntity, RestoreEntity):
                 if index + 1 < presses:
                     await asyncio.sleep(self._config["command_delay"])
             self._attr_percentage = step_to_percentage(target, self.speed_count)
+            self._last_percentage = self._attr_percentage
         except (Exception, asyncio.CancelledError):
             self._attr_percentage = None
             # Even a service error can occur after transmission. Never claim power.
@@ -228,3 +242,5 @@ class ActionFan(FanEntity, RestoreEntity):
                 percentage_to_step(percentage, self.speed_count), self.speed_count
             )
             self._attr_oscillating = oscillating if percentage else False
+            if percentage:
+                self._last_percentage = self._attr_percentage

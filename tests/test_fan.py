@@ -188,3 +188,46 @@ async def test_reload_restores_current_state(hass, fan_config):
     assert hass.states.get("fan.bedroom_fan").state == "on"
     assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 50
     assert calls == before
+
+
+@pytest.mark.parametrize("off_service", ["turn_off", "set_percentage"])
+async def test_turn_on_resumes_previous_speed(hass, fan_config, off_service):
+    _, calls = await setup_fan(hass, fan_config)
+    await command(hass, "set_percentage", percentage=60)
+    await command(
+        hass,
+        off_service,
+        **({"percentage": 0} if off_service == "set_percentage" else {}),
+    )
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 0
+    calls.clear()
+    await command(hass, "turn_on")
+    assert calls == ["turn_on"] + ["increase"] * 5
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 60
+
+
+async def test_off_speed_survives_reload_and_explicit_target_wins(hass, fan_config):
+    entry, calls = await setup_fan(hass, fan_config)
+    await command(hass, "set_percentage", percentage=70)
+    await command(hass, "turn_off")
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    calls.clear()
+    await command(hass, "turn_on")
+    assert calls == ["turn_on"] + ["increase"] * 6
+    await command(hass, "turn_off")
+    calls.clear()
+    await command(hass, "turn_on", percentage=30)
+    assert calls == ["turn_on", "increase", "increase"]
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 30
+
+
+async def test_saved_off_speed_restores_without_transmitting(hass, fan_config):
+    _, calls = await setup_fan(
+        hass,
+        fan_config,
+        State("fan.bedroom_fan", "off", {"percentage": 0, "last_percentage": 80}),
+    )
+    assert calls == []
+    await command(hass, "turn_on")
+    assert calls == ["turn_on"] + ["increase"] * 7

@@ -25,7 +25,8 @@ Existing entries created with custom action sequences continue to work. If a seq
 - Normal `fan.turn_on`, `fan.turn_off`, `fan.set_percentage`, scenes, and oscillation services.
 - Requests serialize per fan, including power, speed, oscillation, and synchronization.
 - Percentage 0 is off. Nonzero percentages map to the nearest discrete speed, preserving the legacy script's rounding. Example: ten speeds, 10% → 50% sends four increases.
-- Startup uses the configured power-on speed and waits before adjusting. Set this to the fan's actual startup behavior; IR cannot detect a remembered physical speed.
+- Turning on without a percentage resumes the last successful speed, including after a reload or restart while off. An explicit percentage takes priority. Before any speed has been saved, the configured power-on speed is used.
+- The configured power-on speed describes the physical startup speed; the integration waits, then adjusts from that baseline to the resume/explicit target. Set it to the fan's actual startup behavior.
 - Repeated presses wait `command_delay` seconds between them. Wrapping is disabled by default; enable each direction only if your fan supports it.
 - State restores on restart without sending commands. No polling or external speed/power helpers required.
 - Edit codes through the entry's **Configure** button without replacing its entity identity.
