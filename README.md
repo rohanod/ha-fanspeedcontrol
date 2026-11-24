@@ -61,11 +61,8 @@ The previous installation used `python_script.fan_speed_control`, a template fan
 
 ## Synchronize and calibrate
 
-On the fan's device page:
+Press **Calibrate fan** on the device page, or run the **Calibrate fan** action with only the fan selected. There are no direction or speed inputs. It sends only speed-up commands (which power this fan on automatically), then records the maximum speed: **speed 10 / 100%** for the Bedroom Fan. No power-toggle command is sent, even if tracked power is off or unknown.
 
-- **Calibrate to maximum** repeatedly sends speed-up, then records 100%.
-- **Calibrate to minimum** repeatedly sends speed-down, then records the minimum step (10% for ten speeds).
-
-Calibration repeats for at least ten seconds, using your command delay. It continues longer if necessary to send enough presses to span every speed step. A fan known to be off is powered on first; unknown power must be synchronized first. Only use calibration where commands stop at the endpoint; a direction configured to wrap is rejected. Other commands wait until calibration finishes. A failed or interrupted calibration marks speed unknown rather than claiming success. IR reception still cannot be verified by software.
+Calibration repeats for at least ten seconds using your command delay, and sends at least one press per speed step so the first press can power on an off fan. It continues longer if needed to cover every step. Increasing must stop at the maximum; calibration rejects wraparound. Other commands wait until it finishes. Failure or interruption marks speed unknown instead of claiming success. The old minimum-calibration button is removed during upgrade; existing maximum-button references keep their entity ID. Existing action calls must omit the old `direction` field. IR reception cannot be verified by software.
 
 For synchronization without IR, use **Tools → Actions → Fan Speed Control: Synchronize state**. Either set the **Percentage** slider, or leave it unset and fill **Percentage template**, for example `{{ states('sensor.actual_fan_speed') }}`. It reads the template once when the action runs. Invalid, unavailable, or out-of-range output leaves the state unchanged. Omitted oscillation preserves its estimate. No extra helpers or YAML are required.

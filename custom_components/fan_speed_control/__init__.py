@@ -39,7 +39,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "calibrate",
             entity_domain="fan",
             func="async_calibrate",
-            schema={vol.Required("direction"): vol.In(["increase", "decrease"])},
+            schema={},
         )
     return True
 

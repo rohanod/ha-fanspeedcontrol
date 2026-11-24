@@ -271,31 +271,25 @@ class ActionFan(FanEntity, RestoreEntity):
             if percentage:
                 self._last_percentage = self._attr_percentage
 
-    async def async_calibrate(self, direction):
-        """Drive a non-wrapping fan to a known endpoint before updating its estimate."""
+    async def async_calibrate(self):
+        """Speed-up powers on the fan and drives it to the maximum speed."""
         async with self._operation():
-            if self._config[f"wrap_{direction}"]:
+            if self._config["wrap_increase"]:
                 raise HomeAssistantError("Cannot calibrate a direction that wraps")
-            if self._attr_is_on is None:
-                raise HomeAssistantError(
-                    "Power unknown; synchronize the physical power state first"
-                )
-            if not self._attr_is_on:
-                await self._set_percentage(self._config["power_on_percentage"])
             try:
                 deadline = monotonic() + 10
                 presses = 0
-                while monotonic() < deadline or presses < self.speed_count - 1:
-                    await self._run(direction)
+                # The first up command may only power on a stopped fan.
+                while monotonic() < deadline or presses < self.speed_count:
+                    await self._run("increase")
+                    self._attr_is_on = True
                     presses += 1
                     if self._config["command_delay"]:
                         await asyncio.sleep(self._config["command_delay"])
-                self._attr_percentage = (
-                    100
-                    if direction == "increase"
-                    else step_to_percentage(1, self.speed_count)
-                )
+                self._attr_percentage = 100
                 self._last_percentage = self._attr_percentage
             except (Exception, asyncio.CancelledError):
                 self._attr_percentage = None
+                if self._attr_is_on is not True:
+                    self._attr_is_on = None
                 raise

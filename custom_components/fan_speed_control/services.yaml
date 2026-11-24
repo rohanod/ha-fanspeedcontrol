@@ -25,21 +25,9 @@ sync_state:
       selector:
         boolean:
 calibrate:
-  name: Calibrate speed
-  description: Repeat speed commands for at least 10 seconds to reach an endpoint, then synchronize the speed. Turns on a fan known to be off. Only use with directions that stop at the endpoint, not wrap around.
+  name: Calibrate fan
+  description: Repeat only speed-up commands for at least 10 seconds, then record maximum speed (speed 10 / 100% for a ten-speed fan). Speed-up powers on the fan automatically; no power-toggle command is sent. Increasing must stop at maximum, not wrap.
   target:
     entity:
       integration: fan_speed_control
       domain: fan
-  fields:
-    direction:
-      name: Direction
-      required: true
-      default: increase
-      selector:
-        select:
-          options:
-            - label: Maximum speed (up)
-              value: increase
-            - label: Minimum speed (down)
-              value: decrease

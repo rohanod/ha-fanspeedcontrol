@@ -233,27 +233,29 @@ async def test_saved_off_speed_restores_without_transmitting(hass, fan_config):
     assert calls == ["turn_on"] + ["increase"] * 7
 
 
-@pytest.mark.parametrize(
-    ("direction", "expected"), [("increase", 100), ("decrease", 10)]
-)
-async def test_calibrate_reaches_endpoint(hass, fan_config, direction, expected):
+@pytest.mark.parametrize("initial_state", ["on", "off", "unknown"])
+async def test_calibrate_uses_only_up_and_sets_speed_ten(
+    hass, fan_config, initial_state
+):
     from unittest.mock import patch
 
-    _, calls = await setup_fan(hass, fan_config)
-    await command(hass, "turn_on")
-    calls.clear()
+    _, calls = await setup_fan(
+        hass, fan_config, State("fan.bedroom_fan", initial_state, {"percentage": 40})
+    )
     with patch(
         "custom_components.fan_speed_control.fan.monotonic", side_effect=[0, *range(11)]
     ):
         await hass.services.async_call(
             "fan_speed_control",
             "calibrate",
-            {"entity_id": "fan.bedroom_fan", "direction": direction},
+            {"entity_id": "fan.bedroom_fan"},
             blocking=True,
         )
-    assert calls == [direction] * 10
-    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == expected
-    assert hass.states.get("fan.bedroom_fan").attributes["last_percentage"] == expected
+    assert calls == ["increase"] * 10
+    state = hass.states.get("fan.bedroom_fan")
+    assert state.state == "on"
+    assert state.attributes["percentage"] == 100
+    assert state.attributes["last_percentage"] == 100
 
 
 async def test_calibration_refuses_wrapping(hass, fan_config):
@@ -263,7 +265,7 @@ async def test_calibration_refuses_wrapping(hass, fan_config):
         await hass.services.async_call(
             "fan_speed_control",
             "calibrate",
-            {"entity_id": "fan.bedroom_fan", "direction": "increase"},
+            {"entity_id": "fan.bedroom_fan"},
             blocking=True,
         )
     assert calls == []
@@ -281,7 +283,7 @@ async def test_calibration_failure_invalidates_speed(hass, fan_config):
         await hass.services.async_call(
             "fan_speed_control",
             "calibrate",
-            {"entity_id": "fan.bedroom_fan", "direction": "decrease"},
+            {"entity_id": "fan.bedroom_fan"},
             blocking=True,
         )
     assert hass.states.get("fan.bedroom_fan").attributes["percentage"] is None
@@ -320,11 +322,11 @@ async def test_calibration_sends_enough_steps_even_after_ten_seconds(hass, fan_c
         await hass.services.async_call(
             "fan_speed_control",
             "calibrate",
-            {"entity_id": "fan.bedroom_fan", "direction": "decrease"},
+            {"entity_id": "fan.bedroom_fan"},
             blocking=True,
         )
-    assert calls == ["decrease"] * 19
-    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 5
+    assert calls == ["increase"] * 20
+    assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 100
 
 
 async def test_sync_speed_keeps_oscillation_when_omitted(hass, fan_config):
@@ -368,3 +370,40 @@ async def test_sync_template_works_in_native_action_engine(hass, fan_config):
         await script.async_unload()
     assert calls == []
     assert hass.states.get("fan.bedroom_fan").attributes["percentage"] == 50
+
+
+async def test_one_calibrate_button_replaces_old_minimum(
+    hass, fan_config, entity_registry
+):
+    from unittest.mock import patch
+
+    entry = MockConfigEntry(domain="fan_speed_control", data=fan_config)
+    entry.add_to_hass(hass)
+    old = entity_registry.async_get_or_create(
+        "button",
+        "fan_speed_control",
+        f"{entry.entry_id}_calibrate_decrease",
+        config_entry=entry,
+    )
+    calls = []
+
+    async def send(call):
+        calls.append(call.data["command"])
+
+    hass.services.async_register("remote", "send_command", send)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entity_registry.async_get(old.entity_id) is None
+    buttons = [
+        item
+        for item in entity_registry.entities.values()
+        if item.config_entry_id == entry.entry_id and item.domain == "button"
+    ]
+    assert len(buttons) == 1
+    with patch(
+        "custom_components.fan_speed_control.fan.monotonic", side_effect=[0, *range(11)]
+    ):
+        await hass.services.async_call(
+            "button", "press", {"entity_id": buttons[0].entity_id}, blocking=True
+        )
+    assert calls == ["increase"] * 10
